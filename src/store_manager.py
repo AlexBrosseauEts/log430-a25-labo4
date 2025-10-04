@@ -11,7 +11,8 @@ from orders.controllers.order_controller import create_order, remove_order, get_
 from orders.controllers.user_controller import create_user, remove_user, get_user
 from stocks.controllers.product_controller import create_product, remove_product, get_product
 from stocks.controllers.stock_controller import get_stock, set_stock, get_stock_overview, populate_redis_on_startup
- 
+from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
+
 app = Flask(__name__)
 
 # Auto-populate Redis 15s after API startup (to give enough time for the DB to start up as well)
@@ -111,6 +112,9 @@ def graphql_supplier():
     })
 
 # TODO: endpoint /metrics Prometheus
+@app.route("/metrics")
+def metrics():
+    return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
 # Start Flask app
 if __name__ == '__main__':

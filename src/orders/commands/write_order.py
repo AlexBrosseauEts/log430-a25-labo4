@@ -10,6 +10,17 @@ from orders.models.order_item import OrderItem
 from stocks.commands.write_stock import check_in_items_to_stock, check_out_items_from_stock, update_stock_redis
 from db import get_sqlalchemy_session, get_redis_conn
 
+def brincadeira(session, product_ids, scenario):
+    price_map = {}
+    if scenario == "certo":
+        products_query = session.query(Product).filter(Product.id.in_(product_ids)).all()
+        price_map = {product.id: product.price for product in products_query}
+    else:
+        for product_id in product_ids:
+            products_query = session.query(Product).filter(Product.id == product_id).all()
+            price_map[product_id] = products_query[0].price
+    return price_map
+
 def add_order(user_id: int, items: list):
     """Insert order with items in MySQL, keep Redis in sync"""
     if not items:
@@ -19,8 +30,7 @@ def add_order(user_id: int, items: list):
     session = get_sqlalchemy_session()
 
     try:
-        products_query = session.query(Product).filter(Product.id.in_(product_ids)).all()
-        price_map = {product.id: product.price for product in products_query}
+        price_map = brincadeira(session, product_ids, "certo")
         total_amount = 0
         order_items = []
         
