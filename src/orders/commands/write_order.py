@@ -10,17 +10,6 @@ from orders.models.order_item import OrderItem
 from stocks.commands.write_stock import check_in_items_to_stock, check_out_items_from_stock, update_stock_redis
 from db import get_sqlalchemy_session, get_redis_conn
 
-def test123(session, product_ids, scenario):
-    price_map = {}
-    if scenario == 1:
-        products_query = session.query(Product).filter(Product.id.in_(product_ids)).all()
-        price_map = {product.id: product.price for product in products_query}
-    else:
-        for product_id in product_ids:
-            products_query = session.query(Product).filter(Product.id == product_id).all()
-            price_map[product_id] = products_query[0].price
-    return price_map
-
 def add_order(user_id: int, items: list):
     """Insert order with items in MySQL, keep Redis in sync"""
     if not items:
@@ -30,7 +19,11 @@ def add_order(user_id: int, items: list):
     session = get_sqlalchemy_session()
 
     try:
-        price_map = test123(session, product_ids, 0)
+        product_prices = {}
+        for product_id in product_ids:
+            product = session.query(Product).filter(Product.id == product_id).all()
+            product_prices[product_id] = product[0].price
+
         total_amount = 0
         order_items = []
         
@@ -38,10 +31,10 @@ def add_order(user_id: int, items: list):
             pid = item["product_id"]
             qty = item["quantity"]
 
-            if pid not in price_map:
+            if pid not in product_prices:
                 raise ValueError(f"Product ID {pid} not found in database.")
 
-            unit_price = price_map[pid]
+            unit_price = product_prices[pid]
             total_amount += unit_price * qty
 
             order_items.append({

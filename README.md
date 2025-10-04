@@ -14,7 +14,7 @@ Dans ce laboratoire, on continuera à utiliser la même version du « store mana
 
 > ⚠️ **IMPORTANT** : Les documents ARC42 et ADR contenus dans ce dépôt sont identiques à ceux du laboratoire 03, car nous ne modifions pas l'architecture de l'application dans ce laboratoire.
 
-> 📝 NOTE : À partir de ce laboratoire, nous vous encourageons à utiliser la bibliothèque `logging` plutôt que la commande `print`. Bien que `print` fonctionne bien pour le débogage, l'utilisation d'un logger est une bonne pratique de développement logiciel car il offre [plusieurs avantages lorsque notre application entre en production](https://www.geeksforgeeks.org/python/difference-between-logging-and-print-in-python/). Vous trouverez un exemple d'utilisation du `logging` dans `src/stocks/commands/write_stock.py`. Vous trouverez les détails de l'implementation d'une classe `logger` dans `src/logger.py`.
+> 📝 NOTE : À partir de ce laboratoire, nous vous encourageons à utiliser la bibliothèque `logging` plutôt que la commande `print`. Bien que `print` fonctionne bien pour le débogage, l'utilisation d'un logger est une bonne pratique de développement logiciel car il offre [plusieurs avantages lorsque notre application entre en production](https://www.geeksforgeeks.org/python/difference-between-logging-and-print-in-python/). Vous trouverez un exemple d'utilisation du `logging` et plus de détails dans `src/stocks/commands/write_stock.py`.
 
 ### 1. Créez un nouveau dépôt à partir du gabarit et clonez le dépôt
 ```bash
@@ -74,7 +74,7 @@ Dans Postman, faites quelques requêtes à `POST /orders`. Ensuite, accédez à 
 ### 5. Lancez un test de charge avec Locust
 Le script `locustfiles/locustfile.py` lorsqu'il est exécuté, effectuera plusieurs appels vers des endpoints (représentés par les méthodes `@task`), simulant ainsi des utilisateurs réels. Dans un premier temps, nous ne modifierons pas ce script, nous l'activerons simplement à partir de l'interface web à Locust.
 
-Accédez à `http://localhost:8089` et appliquez la configuration suivante :
+Accédez à `http://localhost:8089` et appliquez les paramètres suivantes :
 - Number of users (nombre d'utilisateurs) : 100
 - Spawn rate (taux d'apparition des nouveaux utilisateurs) : 1 (par seconde)
 
@@ -92,24 +92,54 @@ Augmentez progressivement le nombre d'utilisateurs jusqu'à ce que l'application
 
 > 💡 **Question 2** : À partir de combien d'utilisateurs votre application cesse-t-elle de répondre correctement (avec MySQL) ? Illustrez votre réponse à l'aide des graphiques Locust.
 
-### 8. Réactivez Redis
-Dans `queries/read_order.py`, remplacez l'appel à `get_highest_spending_users_mysql` par `get_highest_spending_users_redis`. Également, remplacez l'appel à `get_best_selling_products_mysql` par `get_best_selling_products_redis`.
+### 8. Optimisez la lecture des données des articles
+Nous pourrions obtenir une performance supérieure simplement en utilisant un cache en mémoire tel que Redis. Cependant, il est toujours raisonnable de vérifier si nous pouvons d'abord optimiser notre code existant. L'optimisation du code est généralement plus abordable et plus efficace que changer de base de données, serveur Web ou augmenter les ressources de calcul (RAM/CPU) sur un serveur on-premises ou en nuage.
 
-### 9. Testez la charge encore une fois
+Dans `orders/commands/write_order.py`, si nous regardons attentivement la fonction `add_order`, nous verrons qu'elle ne récupère pas les informations des articles de manière efficace. Si nous avions, par exemple, 100 articles dans notre commande, la fonction effectuerait 100 requêtes à la base de données pour chercher les informations sur les articles ([problème N+1](https://planetscale.com/blog/what-is-n-1-query-problem-and-how-to-solve-it)). À fur et a mesure que le nombre d'articles augmente dans la base, le temps de recherche augmente également.
+
+```python
+# ❌ Code non-optimisé
+product_prices = {}
+for product_id in product_ids:
+    product = session.query(Product).filter(Product.id == product_id).all()
+    product_prices[product_id] = product[0].price
+```
+
+Modifiez la fonction `add_order` de façon à collecter et récupérer tous les `product_ids` en une seule requête. Utilisez la fonction `in_` à SQLAlchemy.
+```python
+# ✅ Code optimisé
+product_prices = {}
+product_ids = [1, 2, 3] # Collectez les product_ids des OrderItems
+products = session.query(Product).filter(Product.id.in_(product_ids)).all()
+# Parcourez la liste, extrayez le prix de chaque article
+```
+
+> 📝 NOTE : Ceci n'est qu'un exemple trivial d'optimisation dans une seule fonction. Dans une application réelle, il faut parfois optimiser des algorithmes complèxes, des fonctions mathématiques, des structures de données, ou effectuer des ajustements dans la base de données, comme la [création d'index](https://www.w3schools.com/mysql/mysql_create_index.asp) ou la [normalisation](https://www.ibm.com/fr-fr/think/topics/database-normalization).
+
+Relancez les tests avec Locust (avec les mêmes paramètres de la dernière activité).
+
+> 💡 **Question 3** : À partir de combien d'utilisateurs votre application cesse-t-elle de répondre correctement (avec MySQL + Optimisation) ? Illustrez votre réponse à l'aide des graphiques Locust.
+
+### 9. Réactivez Redis
+Étant donné que nous avons fait de notre mieux pour identifier les obstructions dans notre application (lectures de la base de données) et l'optimiser, nous pouvons désormais mettre en place un cache en memóire pour aller encore plus loin. Dans `queries/read_order.py`, remplacez l'appel à `get_highest_spending_users_mysql` par `get_highest_spending_users_redis`. Également, remplacez l'appel à `get_best_selling_products_mysql` par `get_best_selling_products_redis`.
+
+### 10. Testez la charge encore une fois
 Augmentez progressivement le nombre d'utilisateurs jusqu'à ce que l'application échoue (timeouts, erreurs 500, etc.).
 
-> 💡 **Question 3** : À partir de combien d'utilisateurs votre application cesse-t-elle de répondre correctement (avec Redis) ? Quelle est la latence et le taux d'erreur observés ? Illustrez votre réponse à l'aide des graphiques Locust.
+> 💡 **Question 4** : À partir de combien d'utilisateurs votre application cesse-t-elle de répondre correctement (avec Redis) ? Quelle est la latence et le taux d'erreur observés ? Illustrez votre réponse à l'aide des graphiques Locust.
 
-### 10. Testez l'équilibrage de charge (load balancing) avec Nginx
+### 11. Testez l'équilibrage de charge (load balancing) avec Nginx
 Pour tester le scénario suivant, utilisez le répertoire `load-balancer-config` :
 - Copiez le texte dans `docker-compose-to-copy-paste.txt` et collez-le dans `docker-compose.yml`
 - Créez un fichier `nginx.conf` dans le répertoire racine du projet.
 - Copiez le texte dans `nginx-conf-to-copy-paste.txt` et collez-le dans un fichier `nginx.conf`
-Observez les modifications apportées à `docker-compose.yml`. **Reconstruisez le conteneur**, puis redémarrez le conteneur Docker. Relancez ensuite les tests avec Locust (mêmes tests de l'activité 9).
+Observez les modifications apportées à `docker-compose.yml`. **Reconstruisez le conteneur**, puis redémarrez le conteneur Docker. Relancez ensuite les tests avec Locust (avec les mêmes paramètres de la dernière activité).
 
-> 💡 **Question 4** : À partir de combien d'utilisateurs votre application cesse-t-elle de répondre correctement (avec Redis + Nginx load balancing) ? Quelle est la latence et le taux d'erreur observés ? Cela et une amélioration par rapport au scénario de l'activité 7 ? Illustrez votre réponse à l'aide des graphiques Prometheus (onglet `Graph`).
+> 💡 **Question 5** : À partir de combien d'utilisateurs votre application cesse-t-elle de répondre correctement (avec Redis + Nginx load balancing) ? Quelle est la latence moyenne (50ème percentile) et le taux d'erreur observés ? Illustrez votre réponse à l'aide des graphiques Locust.
 
-> 💡 **Question 5** : Dans le fichier `nginx.conf`, il existe un attribut qui configure l'équilibrage de charge. Quelle politique d'équilibrage de charge utilisons-nous actuellement ? Consultez la documentation officielle Nginx si vous avez des questions.
+> 💡 **Question 6** : Avez-vous constaté une amélioration des performances à mesure que nous avons mis en œuvre différentes approches d'optimisation ? Quelle a été la meilleure approche ? Justifiez votre réponse en vous référant aux réponses précédentes.
+
+> 💡 **Question 7** : Dans le fichier `nginx.conf`, il existe un attribut qui configure l'équilibrage de charge. Quelle politique d'équilibrage de charge utilisons-nous actuellement ? Consultez la documentation officielle Nginx si vous avez des questions.
 
 ## 📦 Livrables
 
