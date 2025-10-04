@@ -10,6 +10,17 @@ from orders.models.order_item import OrderItem
 from stocks.commands.write_stock import check_in_items_to_stock, check_out_items_from_stock, update_stock_redis
 from db import get_sqlalchemy_session, get_redis_conn
 
+def testOtpimizationApproach(session, product_ids, is_optimized):
+    product_prices = {}
+    if is_optimized:
+        products = session.query(Product).filter(Product.id.in_(product_ids)).all()
+        product_prices = {product.id: product.price for product in products}
+    else:
+        for product_id in product_ids:
+            products = session.query(Product).filter(Product.id == product_id).all()
+            product_prices[product_id] = products[0].price
+    return product_prices
+
 def add_order(user_id: int, items: list):
     """Insert order with items in MySQL, keep Redis in sync"""
     if not items:
@@ -19,11 +30,7 @@ def add_order(user_id: int, items: list):
     session = get_sqlalchemy_session()
 
     try:
-        product_prices = {}
-        for product_id in product_ids:
-            product = session.query(Product).filter(Product.id == product_id).all()
-            product_prices[product_id] = product[0].price
-
+        product_prices = testOtpimizationApproach(session, product_ids, False)
         total_amount = 0
         order_items = []
         
