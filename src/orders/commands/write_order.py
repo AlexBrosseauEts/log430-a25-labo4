@@ -14,9 +14,11 @@ def test_optimization_approach(session, product_ids, is_optimized):
     """Test N+1"""
     product_prices = {}
     if is_optimized:
+        print("is optimized")
         products = session.query(Product).filter(Product.id.in_(product_ids)).all()
         product_prices = {product.id: product.price for product in products}
     else:
+        print("not optimized")
         for product_id in product_ids:
             products = session.query(Product).filter(Product.id == product_id).all()
             product_prices[product_id] = products[0].price
