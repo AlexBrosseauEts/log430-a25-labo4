@@ -20,8 +20,9 @@ class FlaskAPIUser(HttpUser):
             "items": [{"product_id": random.randint(1, 4), "quantity": random.randint(1, 5)}] 
         }   
 
-        # Ajouter aléatoirement un deuxième élément (30 % des fois)
-        if random.randint(1, 10) <= 3:
+        # Ajouter aléatoirement un deuxième et troisième élément (80 % des fois)
+        if random.randint(1, 10) <= 8:
+            mock_order["items"].append({"product_id": random.randint(1, 4), "quantity": random.randint(1, 5)})
             mock_order["items"].append({"product_id": random.randint(1, 4), "quantity": random.randint(1, 5)})
 
         with self.client.post("/orders", 
