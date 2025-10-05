@@ -143,3 +143,4 @@ def get_highest_spending_users():
 def get_best_selling_products():
     """Get report of best selling products"""
     return get_best_selling_products_redis()
+#
