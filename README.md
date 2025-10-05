@@ -86,7 +86,14 @@ Lancez le test et observez les statistiques et graphiques dans Locust (onglet `C
 ### 6. Écrivez un nouveau test de charge avec Locust
 Dans le répertoire `locustfiles/experiments/locustfile_read_write.py`, complétez le script `locustfile_read_write.py` pour ajouter une commande en utilisant des valeurs aléatoires et une proportion d'exécution des méthodes `@task` à 66% lectures, 33% écritures (2/3, 1/3, 1/3). Plus d'informations sur la proportion d'exécution des appels de chaque méthode `@task` [dans la documentation officielle à Locust](https://docs.locust.io/en/stable/writing-a-locustfile.html#task-decorator).
 
-Finalement, copiez le code modifié de `locustfiles/experiments/locustfile_read_write.py` à `locustfiles/locustfile.py`. **Reconstruisez le conteneur**, puis redémarrez le conteneur Docker et relancez le test Locust. Si cela fonctionne, passez à l'activité 7.
+Finalement, copiez le code modifié de `locustfiles/experiments/locustfile_read_write.py` à `locustfiles/locustfile.py`. 
+
+Éxecutez :
+```bash
+docker compose down -v && docker compose up -d --build
+```
+
+Relancez le test Locust (avec les mêmes paramètres de la dernière activité). Si cela fonctionne, passez à l'activité 7.
 
 ### 7. Augmentez la charge
 Augmentez progressivement le nombre d'utilisateurs jusqu'à ce que l'application échoue (timeouts, erreurs 500, etc.).
@@ -117,7 +124,12 @@ products = session.query(Product).filter(Product.id.in_(product_ids)).all()
 
 > 📝 NOTE : Ceci n'est qu'un exemple trivial d'optimisation dans une seule méthode. Dans une application réelle, il faut parfois optimiser des algorithmes complèxes, des fonctions mathématiques, des structures de données, ou effectuer des ajustements dans la base de données, comme la [création d'index](https://www.w3schools.com/mysql/mysql_create_index.asp) ou la [normalisation](https://www.ibm.com/fr-fr/think/topics/database-normalization).
 
-Relancez les tests avec Locust (avec les mêmes paramètres de la dernière activité).
+Éxecutez :
+```bash
+docker compose down -v && docker compose up -d --build
+```
+
+Relancez le test Locust (avec les mêmes paramètres de la dernière activité).
 
 > 💡 **Question 3** : À partir de combien d'utilisateurs votre application cesse-t-elle de répondre correctement (avec MySQL + Optimisation) ? Illustrez votre réponse à l'aide des graphiques Locust.
 
@@ -125,6 +137,11 @@ Relancez les tests avec Locust (avec les mêmes paramètres de la dernière acti
 Étant donné que nous avons fait de notre mieux pour identifier les obstructions dans notre application (lectures de la base de données) et l'optimiser, nous pouvons désormais mettre en place un cache en memóire pour aller encore plus loin. Dans `queries/read_order.py`, remplacez l'appel à `get_highest_spending_users_mysql` par `get_highest_spending_users_redis`. Également, remplacez l'appel à `get_best_selling_products_mysql` par `get_best_selling_products_redis`.
 
 ### 10. Testez la charge encore une fois
+Éxecutez :
+```bash
+docker compose down -v && docker compose up -d --build
+```
+
 Augmentez progressivement le nombre d'utilisateurs jusqu'à ce que l'application échoue (timeouts, erreurs 500, etc.). Regardez l'onglet `Failures` pour plus d'informations sur les erreurs.
 
 > 💡 **Question 4** : À partir de combien d'utilisateurs votre application cesse-t-elle de répondre correctement (avec Redis) ? Quelle est la latence et le taux d'erreur observés ? Illustrez votre réponse à l'aide des graphiques Locust.
@@ -134,7 +151,14 @@ Pour tester le scénario suivant, utilisez le répertoire `load-balancer-config`
 - Copiez le texte dans `docker-compose-to-copy-paste.txt` et collez-le dans `docker-compose.yml`
 - Créez un fichier `nginx.conf` dans le répertoire racine du projet.
 - Copiez le texte dans `nginx-conf-to-copy-paste.txt` et collez-le dans un fichier `nginx.conf`
-Observez les modifications apportées à `docker-compose.yml`. **Reconstruisez le conteneur**, puis redémarrez le conteneur Docker. Relancez ensuite les tests avec Locust (avec les mêmes paramètres de la dernière activité).
+Observez les modifications apportées à `docker-compose.yml`. 
+
+Éxecutez :
+```bash
+docker compose down -v && docker compose up -d --build
+```
+
+Ensuite, relancez le test Locust (avec les mêmes paramètres de la dernière activité)
 
 > 💡 **Question 5** : À partir de combien d'utilisateurs votre application cesse-t-elle de répondre correctement (avec Redis + Nginx load balancing) ? Quelle est la latence moyenne (50ème percentile) et le taux d'erreur observés ? Illustrez votre réponse à l'aide des graphiques Locust.
 
