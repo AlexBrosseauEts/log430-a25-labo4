@@ -31,7 +31,7 @@ def add_order(user_id: int, items: list):
     session = get_sqlalchemy_session()
 
     try:
-        product_prices = test_optimization_approach(session, product_ids, True)
+        product_prices = test_optimization_approach(session, product_ids, False)
         total_amount = 0
         order_items = []
         
