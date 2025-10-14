@@ -19,6 +19,7 @@ app = Flask(__name__)
 thread = threading.Timer(2.0, populate_redis_on_startup)
 thread.daemon = True
 thread.start()
+counter_orders = Counter('orders', 'Total calls to /orders')
 
 @app.get('/health-check')
 def health():
@@ -29,6 +30,7 @@ def health():
 @app.post('/orders')
 def post_orders():
     """Create a new order based on information on request body"""
+    counter_orders.inc()
     return create_order(request)
 
 @app.delete('/orders/<int:order_id>')
