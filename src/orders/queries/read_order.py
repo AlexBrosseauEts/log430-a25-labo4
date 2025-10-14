@@ -78,79 +78,95 @@ def get_best_selling_products_mysql():
 def get_highest_spending_users_redis():
     """Get report of highest spending users from Redis"""
     result = []
-    try: 
-        start_time = time.time()
-        # TODO: optimiser
-        r = get_redis_conn()
-        limit = 10
-        order_keys = r.keys("order:*")
-        spending = defaultdict(float)
-        
-        for key in order_keys:
-            order_data = r.hgetall(key)
-            if "user_id" in order_data and "total_amount" in order_data:
-                user_id = int(order_data["user_id"])
-                total = float(order_data["total_amount"])
-                spending[user_id] += total
+    report_in_cache = r.hgetall("reports:highest_spending_users")
+    if report_in_cache:
+        return json.loads(report_in_cache)
+    else
+    {
+        try: 
+            start_time = time.time()
+            # TODO: optimiser
+            r = get_redis_conn()
+            limit = 10
+            order_keys = r.keys("order:*")
+            spending = defaultdict(float)
+            
+            for key in order_keys:
+                order_data = r.hgetall(key)
+                if "user_id" in order_data and "total_amount" in order_data:
+                    user_id = int(order_data["user_id"])
+                    total = float(order_data["total_amount"])
+                    spending[user_id] += total
 
-        # Trier par total dépensé (décroissant), limite X
-        highest_spending_users = sorted(spending.items(), key=lambda x: x[1], reverse=True)[:limit]
-        for user in highest_spending_users:
-            result.append({
-                "user_id": user[0],
-                "total_expense": round(user[1], 2)
-            })
+            # Trier par total dépensé (décroissant), limite X
+            highest_spending_users = sorted(spending.items(), key=lambda x: x[1], reverse=True)[:limit]
+            for user in highest_spending_users:
+                result.append({
+                    "user_id": user[0],
+                    "total_expense": round(user[1], 2)
+                })
 
-    except Exception as e:
-        return {'error': str(e)}
+        except Exception as e:
+            return {'error': str(e)}
 
-    end_time = time.time()
-    logger.debug(f"Executed in {end_time - start_time} seconds")
-    return result
+        end_time = time.time()
+        logger.debug(f"Executed in {end_time - start_time} seconds")
+        r.hset('reports:highest_spending_users', mapping=result)
+        r.expire("reports:highest_spending_users", 60) # invalider le cache toutes les 60 secondes
+        return result
+    }
 
 def get_best_selling_products_redis():
     """Get report of best selling products by quantity sold from Redis"""
     result = []
-    try:
-        start_time = time.time()
-        # TODO: optimiser
-        r = get_redis_conn()
-        limit = 10
-        order_keys = r.keys("order:*")
-        product_sales = defaultdict(int)
+    report_in_cache = r.hgetall("reports:best_selling_products")
+    if report_in_cache:
+        return json.loads(report_in_cache)
+    else
+    {
+        try:
+            start_time = time.time()
+            # TODO: optimiser
+            r = get_redis_conn()
+            limit = 10
+            order_keys = r.keys("order:*")
+            product_sales = defaultdict(int)
+            
+            for order_key in order_keys:
+                order_data = r.hgetall(order_key)
+                if "items" in order_data:
+                    try:
+                        products = json.loads(order_data["items"])
+                    except Exception:
+                        continue
+
+                    for item in products:
+                        product_id = int(item.get("product_id", 0))
+                        quantity = int(item.get("quantity", 0))
+                        product_sales[product_id] += quantity
+
+            # Trier par total vendu (décroissant), limite X
+            best_selling = sorted(product_sales.items(), key=lambda x: x[1], reverse=True)[:limit]
+            for product in best_selling:
+                result.append({
+                    "product_id": product[0],
+                    "quantity_sold": product[1]
+                })
+
+        except Exception as e:
+            return {'error': str(e)}
         
-        for order_key in order_keys:
-            order_data = r.hgetall(order_key)
-            if "items" in order_data:
-                try:
-                    products = json.loads(order_data["items"])
-                except Exception:
-                    continue
-
-                for item in products:
-                    product_id = int(item.get("product_id", 0))
-                    quantity = int(item.get("quantity", 0))
-                    product_sales[product_id] += quantity
-
-        # Trier par total vendu (décroissant), limite X
-        best_selling = sorted(product_sales.items(), key=lambda x: x[1], reverse=True)[:limit]
-        for product in best_selling:
-            result.append({
-                "product_id": product[0],
-                "quantity_sold": product[1]
-            })
-
-    except Exception as e:
-        return {'error': str(e)}
-    
-    end_time = time.time()
-    logger.debug(f"Executed in {end_time - start_time} seconds")
-    return result
+        end_time = time.time()
+        logger.debug(f"Executed in {end_time - start_time} seconds")
+        r.hset('reports:best_selling_products', mapping=result)
+        r.expire("reports:best_selling_products", 60)
+        return result
+    }
 
 def get_highest_spending_users():
     """Get report of highest spending users"""
-    return get_highest_spending_users_mysql()
+    return get_highest_spending_users_redis()
 
 def get_best_selling_products():
     """Get report of best selling products"""
-    return get_best_selling_products_mysql()
+    return get_best_selling_products_redis()
