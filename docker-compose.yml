@@ -10,20 +10,22 @@ services:
     networks:
       - labo04-network
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   locust:
-     image: locustio/locust
-     ports:
-       - "8089:8089"
-     volumes:
-       - ./locustfiles:/mnt/locust
-     command: -f /mnt/locust/locustfile.py --host=http://store_manager:5000
-     depends_on:
+    image: locustio/locust
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./locustfiles:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --host=http://store_manager:5000
+    depends_on:
       - store_manager
-     networks:
-       - labo04-network
+    networks:
+      - labo04-network
 
   prometheus:
     image: prom/prometheus:latest
@@ -59,6 +61,11 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./db-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7
@@ -67,6 +74,12 @@ services:
       - labo04-network
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
 
 networks:
   labo04-network:
