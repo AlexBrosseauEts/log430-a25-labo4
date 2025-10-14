@@ -78,10 +78,9 @@ def get_best_selling_products_mysql():
 def get_highest_spending_users_redis():
     """Get report of highest spending users from Redis"""
     r = get_redis_conn()
-    # Labo: lire depuis le cache avant de calculer
     report_in_cache = r.hgetall("reports:highest_spending_users")
-    if report_in_cache:
-        return json.loads(report_in_cache)
+    if report_in_cache and "data" in report_in_cache:
+        return json.loads(report_in_cache["data"])
     else:
         result = []
         try: 
@@ -114,7 +113,7 @@ def get_highest_spending_users_redis():
             end_time = time.time()
             logger.debug(f"Executed in {end_time - start_time} seconds")
 
-        r.hset("reports:highest_spending_users", mapping=result)
+        r.hset("reports:highest_spending_users", mapping={"data": json.dumps(result)})
         r.expire("reports:highest_spending_users", 60)
         return result
 
@@ -122,8 +121,8 @@ def get_best_selling_products_redis():
     """Get report of best selling products by quantity sold from Redis"""
     r = get_redis_conn()
     report_in_cache = r.hgetall("reports:best_selling_products")
-    if report_in_cache:
-        return json.loads(report_in_cache)
+    if report_in_cache and "data" in report_in_cache:
+        return json.loads(report_in_cache["data"])
     else:
         result = []
         try:
@@ -164,9 +163,10 @@ def get_best_selling_products_redis():
             end_time = time.time()
             logger.debug(f"Executed in {end_time - start_time} seconds")
 
-        r.hset("reports:best_selling_products", mapping={result})
+        r.hset("reports:best_selling_products", mapping={"data": json.dumps(result)})
         r.expire("reports:best_selling_products", 60)
         return result
+
 
 def get_highest_spending_users():
     """Get report of highest spending users"""
