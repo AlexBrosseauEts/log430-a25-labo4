@@ -20,6 +20,8 @@ thread = threading.Timer(2.0, populate_redis_on_startup)
 thread.daemon = True
 thread.start()
 counter_orders = Counter('orders', 'Total calls to /orders')
+counter_highest_spenders = Counter('highest_spenders', 'Total calls to /orders/reports/highest-spenders')
+counter_best_sellers = Counter('best_sellers', 'Total calls to /orders/reports/best-sellers')
 
 @app.get('/health-check')
 def health():
@@ -88,12 +90,14 @@ def get_stocks(product_id):
 def get_orders_highest_spending_users():
     """Get list of highest speding users, ordered by total expenditure"""
     rows = get_report_highest_spending_users()
+    counter_highest_spenders.inc()
     return jsonify(rows)
 
 @app.get('/orders/reports/best-sellers')
 def get_orders_report_best_selling_products():
     """Get list of best selling products, ordered by number of orders"""
     rows = get_report_best_selling_products()
+    counter_best_sellers.inc()
     return jsonify(rows)
 
 @app.get('/stocks/reports/overview-stocks')
